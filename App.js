@@ -1,5 +1,6 @@
+import React, { useState, useEffect } from 'react';
 
-import React, { useState } from 'react';
+import { supabase } from './supabase';
 
 import {
   SafeAreaView,
@@ -17,49 +18,56 @@ import {
 
 import QRCode from 'react-native-qrcode-svg';
 
-const eventosIniciais = [
-  {
-    id: 1,
-    titulo: 'Tecnologia e Inovação',
-    data: '18 de novembro',
-    dataISO: '2026-11-18T19:00:00',
-    horario: '19:00',
-    local: 'Auditório principal',
-    vagas: 25,
-    descricao: 'Um encontro para conhecer novas tecnologias, tendências e soluções inovadoras para o mercado.',
-  },
-  {
-    id: 2,
-    titulo: 'Inteligência Artificial',
-    data: '19 de novembro',
-    dataISO: '2026-11-19T14:00:00',
-    horario: '14:00',
-    local: 'Laboratório 02',
-    vagas: 12,
-    descricao: 'Conheça aplicações da inteligência artificial e como ela está transformando diferentes áreas.',
-  },
-  {
-    id: 3,
-    titulo: 'Desenvolvimento Mobile',
-    data: '20 de novembro',
-    dataISO: '2026-11-20T09:00:00',
-    horario: '09:00',
-    local: 'Sala 105',
-    vagas: 8,
-    descricao: 'Uma introdução ao desenvolvimento de aplicativos móveis e suas principais tecnologias.',
-  },
-];
-
 export default function App() {
   const [tela, setTela] = useState('inicio');
   const [aba, setAba] = useState('inicio');
 
-  const [eventos, setEventos] = useState(eventosIniciais);
+  const [eventos, setEventos] = useState([]);
   const [eventoSelecionado, setEventoSelecionado] = useState(null);
   const [ingressos, setIngressos] = useState([]);
 
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    async function carregarEventos() {
+      const { data, error } = await supabase
+        .from('eventos')
+        .select('*')
+        .order('data_hora', { ascending: true });
+
+      if (error) {
+        console.log('Erro ao carregar eventos:', error.message);
+        Alert.alert('Erro', 'Não foi possível carregar os eventos.');
+        return;
+      }
+
+      const eventosFormatados = data.map((item) => {
+        const dataEvento = new Date(item.data_hora);
+
+        return {
+          id: item.id,
+          titulo: item.titulo,
+          data: dataEvento.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: 'long',
+          }),
+          dataISO: item.data_hora,
+          horario: dataEvento.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          local: item.local,
+          vagas: item.vagas - (item.ocupadas || 0),
+          descricao: item.descricao || '',
+        };
+      });
+
+      setEventos(eventosFormatados);
+    }
+
+    carregarEventos();
+  }, []);
 
   function abrirEvento(evento) {
     setEventoSelecionado(evento);
@@ -235,13 +243,13 @@ export default function App() {
 
         {tela === 'inicio' && (
           <ScrollView
-  style={styles.scrollFormulario}
-  contentContainerStyle={styles.conteudoFormulario}
-  keyboardShouldPersistTaps="handled"
-  keyboardDismissMode="on-drag"
-  automaticallyAdjustKeyboardInsets={true}
-  showsVerticalScrollIndicator={false}
->
+            style={styles.scrollFormulario}
+            contentContainerStyle={styles.conteudoFormulario}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            automaticallyAdjustKeyboardInsets={true}
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.header}>
               <Text style={styles.logo}>EVENTOS ACADÊMICOS</Text>
               <Text style={styles.titulo}>Semana Acadêmica</Text>
@@ -277,8 +285,7 @@ export default function App() {
             </View>
           </ScrollView>
         )}
-
-        {tela === 'detalhes' && eventoSelecionado && (
+                {tela === 'detalhes' && eventoSelecionado && (
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
               <TouchableOpacity onPress={() => voltarAba('inicio')}>
@@ -503,7 +510,6 @@ export default function App() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
