@@ -129,3 +129,82 @@ Depois de integrar o aplicativo com o banco de dados, realizei alguns testes par
 | Tentar cadastrar um e-mail inválido | Bloqueado |
 | Tentar realizar uma inscrição duplicada | Bloqueado |
 | Tentar se inscrever em um evento passado | Bloqueado
+
+Teste da última vaga
+
+Para testar essa situação, criei um evento com apenas uma vaga disponível e utilizei um script em Node.js para enviar duas solicitações de inscrição praticamente ao mesmo tempo.
+
+No final, o teste funcionou como esperado: apenas uma inscrição foi registrada, enquanto a outra foi recusada porque a vaga já estava ocupada.
+
+Esse teste foi importante para confirmar se o controle de vagas estava funcionando mesmo quando duas solicitações aconteciam praticamente juntas.
+
+Vale lembrar que esse teste foi realizado diretamente com as funções do Supabase, e não por meio de uma API HTTP.
+
+8. Segurança
+
+Também tomei alguns cuidados durante o desenvolvimento:
+
+As informações de conexão ficam no arquivo .env.
+
+O arquivo .env está incluído no .gitignore.
+
+Utilizei a chave pública do Supabase no aplicativo, sem utilizar a chave service_role.
+
+Habilitei o RLS nas tabelas para controlar o acesso aos dados.
+
+Uma melhoria que ainda seria necessária é implementar a autenticação dos participantes e regras mais completas de autorização.
+
+Atualmente, a identificação dos ingressos é feita pelo e-mail armazenado no próprio aplicativo. Isso funciona para a versão desenvolvida, mas não garante que somente o verdadeiro dono do e-mail consiga consultar ou cancelar uma inscrição. Por isso, essa parte precisaria de melhorias antes de utilizar o sistema em produção.
+
+9. Como executar o projeto
+
+Para executar o aplicativo, é necessário ter o Node.js instalado e configurar o projeto no Supabase.
+
+Primeiro, é preciso instalar as dependências:
+
+npm install
+
+Depois, criar um arquivo .env na raiz do projeto com as informações de conexão:
+
+EXPO_PUBLIC_SUPABASE_URL=SUA_URL_DO_SUPABASE
+EXPO_PUBLIC_SUPABASE_KEY=SUA_CHAVE_PUBLICA
+
+Por último, executar o comando:
+
+npx expo start
+
+Com o Expo aberto, basta escanear o QR Code pelo Expo Go para acessar o aplicativo.
+
+10. Dificuldades encontradas
+
+Durante o desenvolvimento, encontrei algumas dificuldades, principalmente na integração do React Native com o Supabase e na configuração das dependências do projeto.
+
+Também precisei corrigir alguns problemas relacionados à organização dos hooks do React, que estavam causando erros na execução do aplicativo.
+
+Outra parte que deu mais trabalho foi o controle das vagas. Não bastava apenas diminuir a quantidade disponível na tela, pois era necessário garantir que a alteração fosse salva corretamente no banco e que duas pessoas não conseguissem ocupar a mesma vaga.
+
+Para resolver isso, implementei as funções diretamente no PostgreSQL e utilizei o bloqueio de linha durante a realização das inscrições.
+
+11. Limitações e melhorias futuras
+
+Apesar de as principais funcionalidades estarem funcionando, ainda existem algumas melhorias que poderiam ser feitas no projeto:
+
+Criar uma tela para administração e cadastro dos eventos.
+
+Implementar uma tela para visualizar todos os participantes inscritos em cada evento.
+
+Implementar autenticação dos usuários.
+
+Melhorar as regras de segurança do banco.
+
+Integrar o aplicativo à API e à infraestrutura de nuvem previstas no projeto do grupo.
+
+12. Conclusão
+
+Desenvolvendo esse projeto, consegui praticar os conhecimentos de React Native e banco de dados, principalmente na integração entre o aplicativo e o Supabase.
+
+Uma das partes mais importantes foi conseguir fazer com que as inscrições fossem realmente salvas no banco, controlar a quantidade de vagas e impedir inscrições duplicadas ou acima do limite permitido.
+
+Também consegui implementar o cancelamento de inscrições e a geração de ingressos com QR Code.
+
+O projeto ainda possui algumas limitações, mas as principais funcionalidades que desenvolvi estão funcionando e foram testadas.
