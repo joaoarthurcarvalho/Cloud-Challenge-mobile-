@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 
 import {
@@ -29,44 +29,108 @@ export default function App() {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
 
+ // Carregar eventos
+async function carregarEventos() {
+  const { data, error } = await supabase
+    .from('eventos')
+    .select('*')
+    .order('data_hora', { ascending: true });
+
+  if (error) {
+    console.log('Erro ao carregar eventos:', error.message);
+    Alert.alert('Erro', 'Não foi possível atualizar os eventos.');
+    return;
+  }
+
+  const eventosFormatados = data.map((item) => {
+    const dataEvento = new Date(item.data_hora);
+
+    return {
+      id: item.id,
+      titulo: item.titulo,
+      data: dataEvento.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+      }),
+      dataISO: item.data_hora,
+      horario: dataEvento.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      local: item.local,
+      vagas: item.vagas - (item.ocupadas || 0),
+      descricao: item.descricao || '',
+    };
+  });
+
+  setEventos(eventosFormatados);
+
+  if (eventoSelecionado) {
+    const atualizado = eventosFormatados.find(
+      (item) => item.id === eventoSelecionado.id
+    );
+
+    if (atualizado) {
+      setEventoSelecionado(atualizado);
+    }
+  }
+}
+
+useEffect(() => {
+  carregarEventos();
+}, []);
+ 
+  // Carregar ingressos salvos
   useEffect(() => {
-    async function carregarEventos() {
-      const { data, error } = await supabase
-        .from('eventos')
-        .select('*')
-        .order('data_hora', { ascending: true });
+    async function carregarIngressos() {
+      try {
+        const emailSalvo = await AsyncStorage.getItem('emailParticipante');
 
-      if (error) {
-        console.log('Erro ao carregar eventos:', error.message);
-        Alert.alert('Erro', 'Não foi possível carregar os eventos.');
-        return;
+        // Se não houver e-mail salvo, não existem ingressos para carregar
+        if (!emailSalvo) {
+          setIngressos([]);
+          return;
+        }
+
+        const { data, error } = await supabase.rpc('buscar_ingressos', {
+          p_email: emailSalvo,
+        });
+
+        if (error) {
+          console.log('Erro ao carregar ingressos:', error);
+          return;
+        }
+
+        const ingressosFormatados = (data || []).map((item) => {
+          const dataEvento = new Date(item.data_hora);
+
+          return {
+            id: item.id,
+            codigo: `ING-${item.id}`,
+            eventoId: item.evento_id,
+            titulo: item.titulo,
+            data: dataEvento.toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: 'long',
+            }),
+            horario: dataEvento.toLocaleTimeString('pt-BR', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            local: item.local,
+            nome: item.nome,
+            email: item.email,
+            status: 'Confirmado',
+          };
+        });
+
+        setIngressos(ingressosFormatados);
+      } catch (erro) {
+        console.log('Erro ao recuperar ingressos:', erro);
       }
-
-      const eventosFormatados = data.map((item) => {
-        const dataEvento = new Date(item.data_hora);
-
-        return {
-          id: item.id,
-          titulo: item.titulo,
-          data: dataEvento.toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: 'long',
-          }),
-          dataISO: item.data_hora,
-          horario: dataEvento.toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-          local: item.local,
-          vagas: item.vagas - (item.ocupadas || 0),
-          descricao: item.descricao || '',
-        };
-      });
-
-      setEventos(eventosFormatados);
     }
 
-    carregarEventos();
+    carregarIngressos();
   }, []);
 
   function abrirEvento(evento) {
@@ -74,117 +138,146 @@ export default function App() {
     setTela('detalhes');
   }
 
-  function voltarAba(destino) {
-    setAba(destino);
-    setTela(destino);
+ function voltarAba(destino) {
+  setAba(destino);
+  setTela(destino);
+
+  if (destino === 'inicio') {
+    carregarEventos();
+  }
+}
+
+async function realizarInscricao() {
+  if (!nome.trim() || !email.trim()) {
+    Alert.alert('Atenção', 'Preencha seu nome e e-mail.');
+    return;
   }
 
-  function realizarInscricao() {
-    if (!nome.trim() || !email.trim()) {
-      Alert.alert('Atenção', 'Preencha seu nome e e-mail.');
-      return;
-    }
+  const emailLimpo = email.trim().toLowerCase();
+  const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo);
 
-    const emailLimpo = email.trim().toLowerCase();
+  if (!emailValido) {
+    Alert.alert('E-mail inválido', 'Digite um e-mail válido.');
+    return;
+  }
 
-    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo);
+  if (!eventoSelecionado) {
+    Alert.alert('Erro', 'Nenhum evento selecionado.');
+    return;
+  }
 
-    if (!emailValido) {
-      Alert.alert('E-mail inválido', 'Digite um e-mail válido.');
-      return;
-    }
+  const { data, error } = await supabase.rpc('realizar_inscricao', {
+    p_evento_id: eventoSelecionado.id,
+    p_nome: nome.trim(),
+    p_email: emailLimpo,
+  });
 
-    const evento = eventos.find(
-      (item) => item.id === eventoSelecionado.id
-    );
+  if (error) {
+    const mensagem = error.message || '';
 
-    if (!evento || evento.vagas <= 0) {
+    if (mensagem.includes('VAGAS_ESGOTADAS')) {
       Alert.alert('Vagas esgotadas', 'Não existem mais vagas disponíveis.');
-      return;
+    } else if (mensagem.includes('INSCRICAO_DUPLICADA')) {
+      Alert.alert('Inscrição existente', 'Este e-mail já possui inscrição neste evento.');
+    } else if (mensagem.includes('EVENTO_PASSADO')) {
+      Alert.alert('Evento encerrado', 'Não é possível se inscrever neste evento.');
+    } else if (mensagem.includes('EVENTO_NAO_ENCONTRADO')) {
+      Alert.alert('Erro', 'Evento não encontrado.');
+    } else {
+      console.log('Erro na inscrição:', error);
+      Alert.alert('Erro', 'Não foi possível realizar sua inscrição.');
     }
 
-    const eventoPassado =
-      new Date(evento.dataISO).getTime() < Date.now();
-
-    if (eventoPassado) {
-      Alert.alert(
-        'Evento encerrado',
-        'Não é possível se inscrever em um evento que já aconteceu.'
-      );
-      return;
-    }
-
-    const duplicado = ingressos.some(
-      (item) =>
-        item.eventoId === evento.id &&
-        item.email.toLowerCase() === emailLimpo
-    );
-
-    if (duplicado) {
-      Alert.alert(
-        'Inscrição existente',
-        'Este e-mail já possui inscrição neste evento.'
-      );
-      return;
-    }
-
-    const codigo = `ING-${Date.now()}`;
-
-    const novoIngresso = {
-      id: codigo,
-      codigo: codigo,
-      eventoId: evento.id,
-      titulo: evento.titulo,
-      data: evento.data,
-      horario: evento.horario,
-      local: evento.local,
-      nome: nome.trim(),
-      email: emailLimpo,
-      status: 'Confirmado',
-    };
-
-    setIngressos((anteriores) => [...anteriores, novoIngresso]);
-
-    setEventos((anteriores) =>
-      anteriores.map((item) =>
-        item.id === evento.id
-          ? { ...item, vagas: item.vagas - 1 }
-          : item
-      )
-    );
-
-    setNome('');
-    setEmail('');
-    setAba('ingressos');
-    setTela('ingressos');
+    return;
   }
 
-  function cancelarInscricao(ingresso) {
-    Alert.alert(
-      'Cancelar inscrição',
-      'Deseja realmente cancelar este ingresso?',
-      [
-        { text: 'Não', style: 'cancel' },
-        {
-          text: 'Sim, cancelar',
-          style: 'destructive',
-          onPress: () => {
-            setIngressos((anteriores) =>
-              anteriores.filter((item) => item.id !== ingresso.id)
-            );
+  const evento = eventos.find(
+    (item) => item.id === eventoSelecionado.id
+  );
 
-            setEventos((anteriores) =>
-              anteriores.map((item) =>
-                item.id === ingresso.eventoId
-                  ? { ...item, vagas: item.vagas + 1 }
-                  : item
-              )
-            );
-          },
+  const codigo = `ING-${data.id}`
+
+  const novoIngresso = {
+    id: data.id,
+    codigo,
+    eventoId: data.evento_id,
+    titulo: evento.titulo,
+    data: evento.data,
+    horario: evento.horario,
+    local: evento.local,
+    nome: data.nome,
+    email: data.email,
+    status: 'Confirmado',
+  };
+
+  setIngressos((anteriores) => [...anteriores, novoIngresso]);
+    await AsyncStorage.setItem('emailParticipante', emailLimpo);
+  setEventos((anteriores) =>
+    anteriores.map((item) =>
+      item.id === eventoSelecionado.id
+        ? { ...item, vagas: item.vagas - 1 }
+        : item
+    )
+  );
+
+  setEventoSelecionado((anterior) => ({
+    ...anterior,
+    vagas: anterior.vagas - 1,
+  }));
+
+  setNome('');
+  setEmail('');
+  setAba('ingressos');
+  setTela('ingressos');
+
+  Alert.alert('Sucesso!', 'Sua inscrição foi confirmada.');
+}
+
+
+async function cancelarInscricao(ingresso) {
+  Alert.alert(
+    'Cancelar inscrição',
+    'Deseja realmente cancelar este ingresso?',
+    [
+      { text: 'Não', style: 'cancel' },
+      {
+        text: 'Sim, cancelar',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await supabase.rpc('cancelar_inscricao', {
+            p_inscricao_id: ingresso.id,
+          });
+
+          if (error) {
+            console.log('Erro ao cancelar inscrição:', error);
+
+            if (error.message.includes('INSCRICAO_JA_CANCELADA')) {
+              Alert.alert('Atenção', 'Esta inscrição já foi cancelada.');
+            } else {
+              Alert.alert('Erro', 'Não foi possível cancelar a inscrição.');
+            }
+
+            return;
+          }
+
+          setIngressos((anteriores) =>
+            anteriores.filter((item) => item.id !== ingresso.id)
+          );
+
+          setEventos((anteriores) =>
+            anteriores.map((item) =>
+              item.id === ingresso.eventoId
+                ? { ...item, vagas: item.vagas + 1 }
+                : item
+            )
+          );
+
+          Alert.alert('Sucesso!', 'Inscrição cancelada e vaga liberada.');
         },
-      ]
-    );
-  }
+      },
+    ]
+  );
+}
 
   function renderNavegacao() {
     return (
