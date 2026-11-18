@@ -214,3 +214,6 @@ Uma das partes mais importantes foi conseguir fazer com que as inscrições foss
 Também consegui implementar o cancelamento de inscrições e a geração de ingressos com QR Code.
 
 O projeto ainda possui algumas limitações, mas as principais funcionalidades que desenvolvi estão funcionando e foram testadas.
+
+Azure:
+https://portal.azure.com/#@pe.senac.br/resource/subscriptions/7a11c3e3-0421-4713-a087-36e5ab33d7dd/resourceGroups/CloudProject/providers/Microsoft.Web/sites/appinscricoessemana/appServices
