@@ -1,5 +1,11 @@
 # Inscrições da Semana Acadêmica
+EQUIPE
+Gabriel	DEV	Desenvolvimento do aplicativo mobile utilizando React Native e Expo; criação das telas e implementação das funcionalidades de consulta de eventos, inscrição de participantes e cancelamento de inscrições; integração do aplicativo com o banco de dados.
+Gabriel	DADOS	Modelagem e criação das tabelas eventos e inscricoes no PostgreSQL/Supabase; implementação das funções SQL realizar_inscricao, buscar_ingressos e cancelar_inscricao; criação das regras para controle de vagas, prevenção de inscrições duplicadas e persistência dos dados.
+Gabriel	QA	Realização dos testes funcionais, incluindo inscrição válida, e-mail duplicado, e-mail inválido, evento passado, evento lotado, cancelamento de inscrição, persistência dos dados e teste de concorrência.
+João Arthur	NUVEM	Responsabilidade pela parte de infraestrutura e computação em nuvem, incluindo organização do ambiente de implantação e atividades relacionadas à publicação e configuração da aplicação, conforme o nível de implantação definido pelo grupo.
 
+Organização da equipe: Gabriel ficou responsável pelo desenvolvimento mobile, banco de dados e testes. João Arthur ficou responsável pela parte de nuvem, seguindo a divisão dos papéis prevista na atividade.
 ## 1. Sobre o projeto
 
 A ideia do projeto Inscrições da Semana Acadêmica é facilitar as inscrições dos alunos nas oficinas e nos eventos realizados pela faculdade.
