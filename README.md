@@ -128,4 +128,4 @@ Depois de integrar o aplicativo com o banco de dados, realizei alguns testes par
 | Fechar e abrir o aplicativo e consultar o ingresso novamente | Funcionou |
 | Tentar cadastrar um e-mail inválido | Bloqueado |
 | Tentar realizar uma inscrição duplicada | Bloqueado |
-| Tentar se inscrever em um evento passado | Bloque
+| Tentar se inscrever em um evento passado | Bloqueado
